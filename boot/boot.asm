@@ -2,7 +2,7 @@
 bits 16
 
 KERNEL_OFFSET equ 0x1000    ; Memory address where kernel will be loaded
-KERNEL_SECTORS equ 2        ; Number of sectors to load (kernel is ~584 bytes, so 2 sectors is enough)
+KERNEL_SECTORS equ 10       ; Number of sectors to load (kernel + about + liteLibs)
 
 start:
     mov [BOOT_DRIVE], dl    ; BIOS stores boot drive in DL

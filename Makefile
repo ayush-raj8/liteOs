@@ -6,21 +6,28 @@ LD=$(shell which i686-elf-ld 2>/dev/null || which x86_64-elf-ld 2>/dev/null || e
 
 BOOT_DIR=boot
 KERNEL_DIR=kernel
+ABOUT_DIR=about
+LIB_DIR=liteLibs
 BUILD_DIR=build
 
 BOOT_SRC=$(BOOT_DIR)/boot.asm
 KERNEL_ENTRY=$(BOOT_DIR)/kernel_entry.asm
 KERNEL_C=$(KERNEL_DIR)/kernel.c
+ABOUT_C=$(ABOUT_DIR)/about.c
+VIDEO_C=$(LIB_DIR)/video.c
 LINKER_SCRIPT=linker.ld
 
 BOOT_BIN=$(BUILD_DIR)/boot.bin
 KERNEL_ENTRY_O=$(BUILD_DIR)/kernel_entry.o
 KERNEL_C_O=$(BUILD_DIR)/kernel.o
+ABOUT_O=$(BUILD_DIR)/about.o
+VIDEO_O=$(BUILD_DIR)/video.o
 KERNEL_ELF=$(BUILD_DIR)/kernel.elf
 KERNEL_BIN=$(BUILD_DIR)/kernel.bin
 OS_IMG=$(BUILD_DIR)/os.img
 
-CFLAGS=-m32 -ffreestanding -O2 -Wall -Wextra -nostdlib -nostdinc -fno-builtin -fno-stack-protector -I$(KERNEL_DIR)
+INCLUDES=-I$(KERNEL_DIR) -I$(ABOUT_DIR) -I$(LIB_DIR)
+CFLAGS=-m32 -ffreestanding -O2 -Wall -Wextra -nostdlib -nostdinc -fno-builtin -fno-stack-protector $(INCLUDES)
 LDFLAGS=-m elf_i386 -T $(LINKER_SCRIPT) --oformat binary -nostdlib
 
 .PHONY: all clean run
@@ -39,8 +46,14 @@ $(KERNEL_ENTRY_O): $(KERNEL_ENTRY) | $(BUILD_DIR)
 $(KERNEL_C_O): $(KERNEL_C) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $(KERNEL_C) -o $(KERNEL_C_O)
 
-$(KERNEL_BIN): $(KERNEL_ENTRY_O) $(KERNEL_C_O) $(LINKER_SCRIPT)
-	$(LD) $(LDFLAGS) $(KERNEL_ENTRY_O) $(KERNEL_C_O) -o $(KERNEL_BIN)
+$(ABOUT_O): $(ABOUT_C) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $(ABOUT_C) -o $(ABOUT_O)
+
+$(VIDEO_O): $(VIDEO_C) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $(VIDEO_C) -o $(VIDEO_O)
+
+$(KERNEL_BIN): $(KERNEL_ENTRY_O) $(KERNEL_C_O) $(ABOUT_O) $(VIDEO_O) $(LINKER_SCRIPT)
+	$(LD) $(LDFLAGS) $(KERNEL_ENTRY_O) $(KERNEL_C_O) $(ABOUT_O) $(VIDEO_O) -o $(KERNEL_BIN)
 
 $(OS_IMG): $(BOOT_BIN) $(KERNEL_BIN)
 	dd if=/dev/zero of=$(OS_IMG) bs=512 count=2880 2>/dev/null || \

@@ -17,8 +17,13 @@ A minimal operating system with a bootloader that loads and transfers control to
 
 - **kernel/kernel.c**: C kernel that:
   - Runs in 32-bit protected mode
-  - Provides a clean C interface for OS development
-  - Includes basic screen output functions
+  - Orchestrates boot (clear screen, welcome message) and calls **about** for app info
+
+- **about/**: Module for “about” strings (version, mode, author).
+  - `about_print()` prints them via **liteLibs** video API.
+
+- **liteLibs/**: Shared libraries (e.g. `video.c` / `video.h`).
+  - `clear_screen()`, `print_string()`, `print_char()`; video memory constants.
 
 - **linker.ld** (project root): Linker script that:
   - Places kernel code at address 0x1000
@@ -45,9 +50,9 @@ make
 ```
 
 This will:
-1. Assemble `boot/boot.asm` to `build/boot.bin`
-2. Assemble `boot/kernel_entry.asm` to object file
-3. Compile `kernel/kernel.c` to object file
+1. Assemble `boot/boot.asm` → `build/boot.bin`
+2. Assemble `boot/kernel_entry.asm` → object file
+3. Compile `kernel/kernel.c`, `about/about.c`, `liteLibs/video.c` → object files
 4. Link everything using `linker.ld` → `build/kernel.bin`
 5. Combine bootloader and kernel into `build/os.img`
 
@@ -55,7 +60,7 @@ All `.o`, `.bin`, and `.img` files are generated in the `build/` folder.
 
 The build process:
 - Bootloader: Assembly → Binary
-- Kernel: C + Assembly → Object files → Linked ELF → Binary
+- Kernel: C (kernel + about + liteLibs) + Assembly → Object files → Linked → Binary
 
 ## Run it
 ```bash
@@ -74,10 +79,10 @@ The bootloader will:
 3. Display "Switched to 32-bit Protected Mode. Jumping to kernel..."
 
 The kernel will then display:
-- "LiteOS Kernel v2.0 - C Kernel"
-- "Kernel loaded successfully!"
-- "Running in 32-bit protected mode"
-- "Welcome to LiteOS!"
+- "Welcome to LiteOS!" (kernel)
+- "Version 1.0" (about)
+- "Running in 32-bit protected mode" (about)
+- "Author: Ayush Raj" (about)
 
 All messages are displayed using C code running in protected mode.
 
@@ -88,11 +93,11 @@ make clean
 
 ## Development
 
-The kernel is written in C, making it much easier to extend with new features:
-- Add new functions to `kernel.c`
-- Use `kernel.h` for shared definitions
-- The bootloader handles all low-level setup
-- Kernel runs in protected mode with full 32-bit capabilities
+The kernel is modular:
+- **kernel**: Entry point; calls `about_print()` and uses **liteLibs** for video.
+- **about**: Holds version/mode/author strings; `about_print()` uses `print_string` from liteLibs.
+- **liteLibs**: Shared code (e.g. video). Add more libs here as needed.
+- Bootloader handles low-level setup; kernel runs in 32-bit protected mode.
 
 ## File Structure
 - **boot/** – assembly sources
@@ -101,7 +106,12 @@ The kernel is written in C, making it much easier to extend with new features:
   - `kernel.asm` – Standalone ASM kernel (optional)
 - **kernel/** – C kernel
   - `kernel.c` – Main kernel code
-  - `kernel.h` – Kernel header
-- **linker.ld** – Linker script (project root; used for kernel and other modules)
+  - `kernel.h` – Includes `video.h`, `about.h`
+- **about/** – About module
+  - `about.c` – Version, mode, author strings; `about_print()`
+  - `about.h` – `about_print()` declaration
+- **liteLibs/** – Shared libraries
+  - `video.c` / `video.h` – `clear_screen`, `print_string`, `print_char`; video constants
+- **linker.ld** – Linker script (project root)
 - **build/** – build output (`.o`, `.bin`, `.img`); created by `make`
 - `Makefile` – Build system
